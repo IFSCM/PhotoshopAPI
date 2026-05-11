@@ -1,183 +1,195 @@
-# Build wheels and publish them to PyPi (for the master branch)
 name: Python Wheels
 
 on:
   workflow_dispatch:
+
   push:
     branches:
-     - dev
+      - dev
+
   pull_request:
     branches:
-     - master
+      - master
+
   release:
     types:
       - published
+
   schedule:
-    - cron: "0 0 * * 1"  # Runs every Monday at midnight UTC
+    - cron: "0 0 * * 1"
 
 jobs:
   build_sdist:
     name: Build SDist
     runs-on: ubuntu-latest
+
     steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: 'recursive'
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
-    - name: Build SDist
-      run: pipx run build --sdist
+      - name: Build SDist
+        run: pipx run build --sdist
 
-    - name: Check metadata
-      run: pipx run twine check dist/*
+      - name: Check metadata
+        run: pipx run twine check dist/*
 
-    - uses: actions/upload-artifact@v4
-      with:
-        name: PhotoshopAPI_Py-srcdist
-        path: dist/*.tar.gz
-
+      - name: Upload SDist Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: photoshopapi-sdist
+          path: dist/*.tar.gz
 
   build_wheels:
+    name: Wheels on ${{ matrix.os_dist.os }}-${{ matrix.os_dist.dist }}
+
     permissions:
       actions: read
       contents: read
 
-    name: Wheels on ${{ matrix.os_dist.os }}-${{ matrix.os_dist.dist }}
     runs-on: ${{ matrix.os_dist.os }}
+
     strategy:
       fail-fast: false
-      matrix:
-         os_dist: [
-          {os: ubuntu-latest, dist: cp38-manylinux_x86_64},
-          {os: ubuntu-latest, dist: cp39-manylinux_x86_64},
-          {os: ubuntu-latest, dist: cp310-manylinux_x86_64},
-          {os: ubuntu-latest, dist: cp311-manylinux_x86_64},
-          {os: ubuntu-latest, dist: cp312-manylinux_x86_64},
-          {os: ubuntu-latest, dist: cp313-manylinux_x86_64},
-          {os: ubuntu-latest, dist: cp314-manylinux_x86_64},
-          
-          {os: windows-latest, dist: cp38-win_amd64},
-          {os: windows-latest, dist: cp39-win_amd64},
-          {os: windows-latest, dist: cp310-win_amd64},
-          {os: windows-latest, dist: cp311-win_amd64},
-          {os: windows-latest, dist: cp312-win_amd64},
-          {os: windows-latest, dist: cp313-win_amd64},
-          {os: windows-latest, dist: cp314-win_amd64},
 
-          {os: macos-latest, dist: cp310-macosx_arm64},
-          {os: macos-latest, dist: cp311-macosx_arm64},
-          {os: macos-latest, dist: cp312-macosx_arm64},
-          {os: macos-latest, dist: cp313-macosx_arm64},
-          {os: macos-latest, dist: cp314-macosx_arm64}
-          ]
+      matrix:
+        os_dist:
+          - { os: ubuntu-latest, dist: cp38-manylinux_x86_64 }
+          - { os: ubuntu-latest, dist: cp39-manylinux_x86_64 }
+          - { os: ubuntu-latest, dist: cp310-manylinux_x86_64 }
+          - { os: ubuntu-latest, dist: cp311-manylinux_x86_64 }
+          - { os: ubuntu-latest, dist: cp312-manylinux_x86_64 }
+          - { os: ubuntu-latest, dist: cp313-manylinux_x86_64 }
+          - { os: ubuntu-latest, dist: cp314-manylinux_x86_64 }
+
+          - { os: windows-latest, dist: cp38-win_amd64 }
+          - { os: windows-latest, dist: cp39-win_amd64 }
+          - { os: windows-latest, dist: cp310-win_amd64 }
+          - { os: windows-latest, dist: cp311-win_amd64 }
+          - { os: windows-latest, dist: cp312-win_amd64 }
+          - { os: windows-latest, dist: cp313-win_amd64 }
+          - { os: windows-latest, dist: cp314-win_amd64 }
+
+          - { os: macos-latest, dist: cp310-macosx_arm64 }
+          - { os: macos-latest, dist: cp311-macosx_arm64 }
+          - { os: macos-latest, dist: cp312-macosx_arm64 }
+          - { os: macos-latest, dist: cp313-macosx_arm64 }
+          - { os: macos-latest, dist: cp314-macosx_arm64 }
 
     steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: 'recursive'
-        fetch-depth: 0
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
 
-    # Further brew packages needed to run/install vcpkg dependencies
-    - name: Setup macos dependencies
-      if: matrix.os_dist.os == 'macos-latest'
-      run: |
+      - name: Setup macOS dependencies
+        if: matrix.os_dist.os == 'macos-latest'
+        run: |
           brew install autoconf
           brew install libtool
           brew install automake
-      
-    - name: Restore vcpkg cache
-      id: vcpkg-cache
-      uses: TAServers/vcpkg-cache@v3
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        prefix: ${{ matrix.os_dist.os }}_wheels_vcpkg
 
-    - uses: pypa/cibuildwheel@v3.3.1
-      env:
-        VCPKG_FEATURE_FLAGS: "binarycaching" # Possibly redundant, but explicitly sets the binary caching feature flag
-        # Override the binary sources on linux only
-        VCPKG_BINARY_SOURCES: "clear;files,${{ steps.vcpkg-cache.outputs.path }},readwrite"
-        CIBW_ENVIRONMENT_LINUX: >
+      - name: Restore vcpkg cache
+        id: vcpkg-cache
+        uses: TAServers/vcpkg-cache@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          prefix: ${{ matrix.os_dist.os }}_wheels_vcpkg
+
+      - name: Build Wheels
+        uses: pypa/cibuildwheel@v3.3.1
+
+        env:
+          VCPKG_FEATURE_FLAGS: binarycaching
+          VCPKG_BINARY_SOURCES: "clear;files,${{ steps.vcpkg-cache.outputs.path }},readwrite"
+
+          CIBW_ENVIRONMENT_LINUX: >
             VCPKG_FEATURE_FLAG="binarycaching"
             VCPKG_BINARY_SOURCES="clear;files,/output/.vcpkg-cache,readwrite"
-        CC: ${{ matrix.os_dist.os == 'macos-latest' && 'clang' || 'gcc-13' }}
-        CXX: ${{ matrix.os_dist.os == 'macos-latest' && 'clang++' || 'g++-13' }}
-        CIBW_ARCHS: auto64
-        MACOSX_DEPLOYMENT_TARGET: 15.0
-        CIBW_BUILD: "${{ matrix.os_dist.dist }}"
 
-        # Linux unlike windows/macos doesn't run cibuildwheel natively but rather in a container
-        # so to restore the vcpkg cache we need to manually copy things back and forth. We (ab)use the /output
-        # directory meant for wheels as that is copied back natively. Note: `zip` is needed here as it doesn't come
-        # by default and vcpkg used it for its binary caching
-        CIBW_BEFORE_ALL_LINUX: |
+          CC: ${{ matrix.os_dist.os == 'macos-latest' && 'clang' || 'gcc-13' }}
+          CXX: ${{ matrix.os_dist.os == 'macos-latest' && 'clang++' || 'g++-13' }}
+
+          CIBW_ARCHS: auto64
+          CIBW_BUILD: ${{ matrix.os_dist.dist }}
+
+          MACOSX_DEPLOYMENT_TARGET: "15.0"
+
+          CIBW_BEFORE_ALL_LINUX: |
             dnf install -y zip
             dnf install -y perl-IPC-Cmd
             dnf install -y perl-core
-            echo "Copying vcpkg cache into container..."
 
             mkdir -p /output/.vcpkg-cache
+
             if [ -d /host${{ github.workspace }}/.vcpkg-cache ]; then
-                cp -r /host${{ github.workspace }}/.vcpkg-cache/* /output/.vcpkg-cache/
-                COUNT=$(find /output/.vcpkg-cache -type f | wc -l)
-                echo "Copied $COUNT binary caches"
+              cp -r /host${{ github.workspace }}/.vcpkg-cache/* /output/.vcpkg-cache/
             fi
-            
-    - name: Copy vcpkg cache (linux only)
-      if: matrix.os_dist.os == 'ubuntu-latest'
-      run: |
-        rm -rf ${{ steps.vcpkg-cache.outputs.path }}
-        mv ./wheelhouse/.vcpkg-cache ${{ steps.vcpkg-cache.outputs.path }}
-        ls -la ${{ steps.vcpkg-cache.outputs.path }}
 
-    - name: Verify clean directory
-      run: git diff --exit-code
-      shell: bash
+      - name: Copy vcpkg cache (Linux only)
+        if: matrix.os_dist.os == 'ubuntu-latest'
+        run: |
+          rm -rf ${{ steps.vcpkg-cache.outputs.path }}
+          mv ./wheelhouse/.vcpkg-cache ${{ steps.vcpkg-cache.outputs.path }}
 
-    - name: Upload wheels
-      uses: actions/upload-artifact@v4
-      with:
-        name: photoshopapi-${{ matrix.os_dist.os }}-${{ matrix.os_dist.dist }}
-        path: wheelhouse/*.whl
-        
-  # Step to check if we can fetch the artifacts and they all come as expected, primarily a debugging
-  # sanity step
-  mock-publish:
-    name: Mock Upload release to PyPI
-    permissions:
-      id-token: write
-    needs: [build_wheels, build_sdist]
+      - name: Verify clean directory
+        run: git diff --exit-code
+        shell: bash
+
+      - name: Upload Wheel Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: photoshopapi-${{ matrix.os_dist.os }}-${{ matrix.os_dist.dist }}
+          path: wheelhouse/*.whl
+
+  mock-release:
+    name: Mock Release Verification
+
+    needs:
+      - build_wheels
+      - build_sdist
+
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/setup-python@v5
-      with:
-        python-version: "3.x"
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          pattern: "*"
+          merge-multiple: true
 
-    - uses: actions/download-artifact@v4
-      with:
-        path: photoshopapi
-        pattern: photoshopapi-*
-        merge-multiple: true
-    - run: ls -R photoshopapi
+      - name: Show Files
+        run: ls -R release-assets
 
+  github-release:
+    name: Upload GitHub Release Assets
 
-  pypi-publish:
-    name: Upload release to PyPI
-    permissions:
-      id-token: write
-    needs: [build_wheels, build_sdist]
-    runs-on: ubuntu-latest
     if: github.event_name == 'release' && github.event.action == 'published'
 
+    needs:
+      - build_wheels
+      - build_sdist
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
     steps:
-    - uses: actions/setup-python@v5
-      with:
-        python-version: "3.x"
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          pattern: "*"
+          merge-multiple: true
 
-    - uses: actions/download-artifact@v4
-      with:
-        path: dist
-        pattern: photoshopapi-*
-        merge-multiple: true
+      - name: Show Files
+        run: ls -R release-assets
 
-    - uses: pypa/gh-action-pypi-publish@release/v1
+      - name: Upload Assets to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release-assets/**/*.whl
+            release-assets/**/*.tar.gz
