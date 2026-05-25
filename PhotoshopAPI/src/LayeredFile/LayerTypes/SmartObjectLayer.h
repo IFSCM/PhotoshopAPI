@@ -32,55 +32,55 @@ PSAPI_NAMESPACE_BEGIN
 
 /// Smart objects are Photoshops' way of non-destructive image data edits while keeping a live link to the original file.
 ///
-/// We expose not only ways to replace this linked image data but also have functionality to recreate and store the warps 
-/// applied to these objects (with more features coming in the future). 
+/// We expose not only ways to replace this linked image data but also have functionality to recreate and store the warps
+/// applied to these objects (with more features coming in the future).
 /// We currently support recreating all the warps found in the Edit->Transform tab. We do not yet support the `Edit->Puppet Warp`
 /// and `Edit->Perspective Warp` which are stored as Smart Filters.
-/// 
+///
 /// Smart objects store their original image data on the `LayeredFile<T>` while storing a decoded preview the size of the layer on
-/// the layer itself. We provide multiple methods to get both the scaled and warped image data as well as the full size image 
+/// the layer itself. We provide multiple methods to get both the scaled and warped image data as well as the full size image
 /// data.
-/// 
+///
 /// <b>Image Data:</b>
-/// 
+///
 /// Due to how SmartObjects work, image data is read-only.
 /// In order to modify the underlying image data you should use the `replace()` method which will actually replace the underlying
 /// file the smart object is linked to.
-/// 
-/// 
+///
+///
 /// Getting the image data can be done via the `get_image_data()`, `get_channel()` and `get_original_image_data()` functions. These will retrieve
 /// the transformed and warped image data. If you modify these you can requery these functions and get up to date image data.
-/// 
+///
 /// <b>Transformations:</b>
-/// 
+///
 /// Unlike normal layers, SmartObjects have slightly different transformation rules. As they link back to a file in memory or on disk
 /// the transformations are stored 'live' and can be modified without negatively impacting the quality of the image. We expose a variety
-/// of transformation options to allow you to express this freedom. 
-/// 
+/// of transformation options to allow you to express this freedom.
+///
 /// Since we have both the original image data, and the rescaled image data to worry about there is two different widths and heights available:
-/// 
+///
 /// - `original_width()` / `original_height()`
 ///		These represent the resolution of the original file image data, irrespective of what transforms are applied to it.
 ///		If you are e.g. loading a 4000x2000 jpeg these will return 4000 and 2000 respectively. These values may not be written to
-/// 
+///
 /// - `width()` / `height()`
-///		These represent the final dimensions of the SmartObject with the warp and any transformations applied to it. 
-/// 
+///		These represent the final dimensions of the SmartObject with the warp and any transformations applied to it.
+///
 /// For actually transforming the layer we expose the following methods:
-/// 
+///
 /// - `move()`
 /// - `rotate()`
 /// - `scale()`
 /// - `transform()`
-/// 
+///
 /// These are all individually documented and abstract away the underlying implementation of these operations. You likely will not have to dive deeper than these.
-/// 
+///
 /// <b>Warp:</b>
-/// 
+///
 /// Smart objects can also store warps which we implement using the `SmartObject::Warp` structure. These warps are stored as bezier surfaces with transformations applied on top of them.
 /// The transformations should be disregarded by the user as we provide easier functions on the SmartObjectLayer directly (see above). The warp itself is stored as a bezier
 /// surface. You may transfer these warps from one layer to another, modify them (although this requires knowledge of how bezier surfaces work), or clear them entirely.
-/// 
+///
 /// For the latter we provide the `reset_transform()` and `reset_warp()` functions.
 template <typename T>
 	requires concepts::bit_depth<T>
@@ -130,20 +130,20 @@ struct SmartObjectLayer final: public Layer<T>, public ImageDataMixin<T>
 	///
 	/// This will internally load the given file (assuming it exists) into memory, decoding the full resolution
 	/// image data as well as generating a resampled image data based on the resolution provided in the layers'
-	/// parameters (this may be zero in which case we will ignore the width and height and keep the original size). 
+	/// parameters (this may be zero in which case we will ignore the width and height and keep the original size).
 	/// Requires the `LayeredFile` to be passed so we can keep track of this global state of linked layer data.
-	/// 
+	///
 	/// \param file				The LayeredFile this SmartObject is to be associated with
-	/// 
+	///
 	/// \param parameters		The Layers' parameters
-	/// 
+	///
 	/// \param filepath			The path of the file to load, this must be a file format Photoshop knows about and can decode.
 	///							If `link_externally` is set to true it is highly recommended to keep this file local to the output directory.
 	///							I.e. if the file gets written to `C:/PhotoshopFiles/file.psb` The file should be in `C:/PhotoshopFiles/`
 	///							(same applies to linux). To learn more about how photoshop resolves these linkes head to this page:
 	///							https://helpx.adobe.com/photoshop/using/create-smart-objects.html#linking_logic
-	/// 
-	/// \param linkage			Whether to link the file externally (without saving it in the document). While this does reduce 
+	///
+	/// \param linkage			Whether to link the file externally (without saving it in the document). While this does reduce
 	///							file size, due to linking limitations it is usually recommended to leave this at its default `false`.
 	///							If the given file already exists on the `LayeredFile<T>` e.g. when you link 2 layers with the same filepath
 	///							the settings for the first layer are used instead of overriding the behaviour
@@ -157,26 +157,26 @@ struct SmartObjectLayer final: public Layer<T>, public ImageDataMixin<T>
 	///
 	/// This will internally load the given file (assuming it exists) into memory, decoding the full resolution
 	/// image data as well as generating a resampled image data based on the resolution provided in the layers'
-	/// parameters (this may be zero in which case we will ignore the width and height and keep the original size). 
+	/// parameters (this may be zero in which case we will ignore the width and height and keep the original size).
 	/// Requires the `LayeredFile` to be passed so we can keep track of this global state of linked layer data.
-	/// 
+	///
 	/// \param file				The LayeredFile this SmartObject is to be associated with
-	/// 
+	///
 	/// \param parameters		The Layers' parameters
-	/// 
+	///
 	/// \param filepath			The path of the file to load, this must be a file format Photoshop knows about and can decode.
 	///							If `link_externally` is set to true it is highly recommended to keep this file local to the output directory.
 	///							I.e. if the file gets written to `C:/PhotoshopFiles/file.psb` The file should be in `C:/PhotoshopFiles/`
 	///							(same applies to linux). To learn more about how photoshop resolves these linkes head to this page:
 	///							https://helpx.adobe.com/photoshop/using/create-smart-objects.html#linking_logic
-	/// 
+	///
 	/// \param warp				The warp to apply to the image data, this may be default generated warp which can be modified later on by
-	///							retrieving it using `warp()`. After then modifying it, the updated warp will be lazily evaluated on write or 
+	///							retrieving it using `warp()`. After then modifying it, the updated warp will be lazily evaluated on write or
 	///							access. So you may modify it as many times as you want but only retrieving it will call the evaluation.
 	///							If you wish to skip this you can pass `SmartObject::Warp::generate_default(width, height)` or use the alternative ctor
 	///							without `warp` argument
-	/// 
-	/// \param linkage			Whether to link the file externally (without saving it in the document). While this does reduce 
+	///
+	/// \param linkage			Whether to link the file externally (without saving it in the document). While this does reduce
 	///							file size, due to linking limitations it is usually recommended to leave this at its default `false`.
 	///							If the given file already exists on the `LayeredFile<T>` e.g. when you link 2 layers with the same filepath
 	///							the settings for the first layer are used instead of overriding the behaviour
@@ -191,7 +191,7 @@ struct SmartObjectLayer final: public Layer<T>, public ImageDataMixin<T>
 	SmartObjectLayer(LayeredFile<T>& file, const LayerRecord& layerRecord, ChannelImageData& channelImageData, const FileHeader& header, const AdditionalLayerInfo& globalAdditionalLayerInfo)
 		: Layer<T>(layerRecord, channelImageData, header)
 	{
-		// Local and global additional layer info in this case refer to the one stored on the individual layer and the one 
+		// Local and global additional layer info in this case refer to the one stored on the individual layer and the one
 		// stored on the LayerAndMaskInfo section respectively
 		m_LinkedLayers = file.linked_layers();
 		if (layerRecord.m_AdditionalLayerInfo)
@@ -211,8 +211,8 @@ struct SmartObjectLayer final: public Layer<T>, public ImageDataMixin<T>
 
 	/// Set the warp object held by this layer, this function may be used to replace the warp with e.g. the
 	/// warp from another layer
-	void warp(SmartObject::Warp _warp) 
-	{ 
+	void warp(SmartObject::Warp _warp)
+	{
 		m_SmartObjectWarp = std::move(_warp);
 		invalidate_cache();
 		invalidate_mesh_cache();
@@ -220,11 +220,11 @@ struct SmartObjectLayer final: public Layer<T>, public ImageDataMixin<T>
 	}
 
 
-	/// Replace the smart object with the given path keeping transformations as well 
+	/// Replace the smart object with the given path keeping transformations as well
 	/// as warp in place.
-	/// 
+	///
 	/// \param path				The path to replace the image data with
-	/// \param link_externally	Whether to link the file externally or store the raw file bytes on the 
+	/// \param link_externally	Whether to link the file externally or store the raw file bytes on the
 	///							photoshop document itself. Keeping this at its default `false` is recommended
 	///							for sharing these files.
 	void replace(std::filesystem::path path, bool link_externally = false)
@@ -248,7 +248,7 @@ struct SmartObjectLayer final: public Layer<T>, public ImageDataMixin<T>
 		Geometry::BoundingBox<double> bbox(
 			Geometry::Point2D<double>(0.0f, 0.0f),
 			Geometry::Point2D<double>(
-				static_cast<double>(linked_layer->width()), 
+				static_cast<double>(linked_layer->width()),
 				static_cast<double>(linked_layer->height())));
 
 		// Finally we also need to rescale the warp points, this is because they are in the original images' coordinate space.
@@ -278,13 +278,13 @@ struct SmartObjectLayer final: public Layer<T>, public ImageDataMixin<T>
 
 	/// Set the type of linkage for the original image data.
 	///
-	/// This can be data or external where data is storing the raw file bytes on the 
+	/// This can be data or external where data is storing the raw file bytes on the
 	/// file itself while external will reference a file from disk. As this property
 	/// only has an effect on-write this can be modified as many times as wanted.
-	/// 
+	///
 	/// As this affects not the layer directly but the shared linked layer if any other
 	/// layers refer to this same file we modify that too.
-	/// 
+	///
 	/// \param linkage The type of linkage we want to set
 	void set_linkage(LinkedLayerType linkage)
 	{
@@ -303,9 +303,9 @@ struct SmartObjectLayer final: public Layer<T>, public ImageDataMixin<T>
 	/// Retrieve the filename associated with this smart object.
 	const std::string& filename() const noexcept { return m_Filename; }
 
-	/// Retrieve the filepath associated with this smart object. Depending on how the 
+	/// Retrieve the filepath associated with this smart object. Depending on how the
 	/// Smart object is linked (`external` or `data`) this may not be written to disk.
-	std::filesystem::path filepath() const 
+	std::filesystem::path filepath() const
 	{
 		if (!m_LinkedLayers)
 		{
@@ -316,7 +316,7 @@ struct SmartObjectLayer final: public Layer<T>, public ImageDataMixin<T>
 	}
 
 	/// Extract all the channels of the original image data.
-	/// 
+	///
 	/// Unlike the accessors `get_image_data()` and `get_channel()` this function gets the full resolution
 	/// image data that is stored on the smart object, i.e. the original image data. This may be smaller
 	/// or larger than the layers `width` or `height`. To get the actual resolution you can query: `original_width()` and `original_height()`
@@ -340,9 +340,9 @@ struct SmartObjectLayer final: public Layer<T>, public ImageDataMixin<T>
 	///
 	/// This does not have the same limitation as Photoshop layers of being limited
 	/// to 30,000 or 300,000 pixels depending on the file type
-	/// 
+	///
 	/// \throws std::runtime_error if the hash defined by `hash()` is not valid for the document
-	/// 
+	///
 	/// \returns The width of the original image data
 	size_t original_width() const
 	{
@@ -358,9 +358,9 @@ struct SmartObjectLayer final: public Layer<T>, public ImageDataMixin<T>
 	///
 	/// This does not have the same limitation as Photoshop layers of being limited
 	/// to 30,000 or 300,000 pixels depending on the file type
-	/// 
+	///
 	/// \throws std::runtime_error if the hash defined by `hash()` is not valid for the document
-	/// 
+	///
 	/// \return The height of the original image data
 	size_t original_height() const
 	{
@@ -372,6 +372,20 @@ struct SmartObjectLayer final: public Layer<T>, public ImageDataMixin<T>
 		return layer->height();
 	}
 
+	/// Return the raw file bytes of the embedded smart object (only populated
+    /// for data-linked smart objects; returns an empty span for external links).
+    std::vector<uint8_t> raw_bytes() const
+    {
+        if (!m_LinkedLayers)
+        {
+            PSAPI_LOG_ERROR("SmartObject",
+                "Unable to get raw bytes without the smart object knowing about the linked layers");
+            return {};
+        }
+        const auto& layer = m_LinkedLayers->at(m_Hash);
+        auto span = layer->raw_data();          // std::span<const uint8_t>
+        return std::vector<uint8_t>(span.begin(), span.end());
+    }
 
 	/// Move the SmartObjectLayer (including any warps) by the given offset
 	///
@@ -399,7 +413,7 @@ struct SmartObjectLayer final: public Layer<T>, public ImageDataMixin<T>
 
 	/// Rotate the SmartObjectLayer (including any warps) by the given offset in degrees
 	/// around the provided center point, this point does not have to lie on the pixels of the image
-	/// 
+	///
 	/// \param offset The rotation value in degrees
 	/// \param center The center point to rotate around
 	void rotate(double offset, Geometry::Point2D<double> center)
@@ -425,7 +439,7 @@ struct SmartObjectLayer final: public Layer<T>, public ImageDataMixin<T>
 
 	/// Rotate the SmartObjectLayer (including any warps) by the given offset in degrees
 	/// around the center of the layer
-	/// 
+	///
 	/// \param offset The rotation value in degrees
 	void rotate(double offset)
 	{
@@ -437,7 +451,7 @@ struct SmartObjectLayer final: public Layer<T>, public ImageDataMixin<T>
 
 	/// Scale the SmartObjectLayer (including any warps) by the given factor in both the x and y
 	/// dimensions.
-	/// 
+	///
 	/// \param factor The scalar factor
 	/// \param center The point to scale about
 	void scale(Geometry::Point2D<double> factor, Geometry::Point2D<double> center)
@@ -461,7 +475,7 @@ struct SmartObjectLayer final: public Layer<T>, public ImageDataMixin<T>
 
 	/// Scale the SmartObjectLayer (including any warps) by the given factor in both the x and y
 	/// dimensions.
-	/// 
+	///
 	/// \param factor The scalar factor
 	/// \param center The point to scale about
 	void scale(double factor, Geometry::Point2D<double> center)
@@ -471,7 +485,7 @@ struct SmartObjectLayer final: public Layer<T>, public ImageDataMixin<T>
 
 	/// Scale the SmartObjectLayer (including any warps) by the given factor in both the x and y
 	/// dimensions around the layers center.
-	/// 
+	///
 	/// \param factor The scalar factor
 	void scale(Geometry::Point2D<double> factor)
 	{
@@ -482,7 +496,7 @@ struct SmartObjectLayer final: public Layer<T>, public ImageDataMixin<T>
 
 	/// Scale the SmartObjectLayer (including any warps) by the given factor in both the x and y
 	/// dimensions around the layers center.
-	/// 
+	///
 	/// \param factor The scalar factor
 	void scale(double factor)
 	{
@@ -490,9 +504,9 @@ struct SmartObjectLayer final: public Layer<T>, public ImageDataMixin<T>
 	}
 
 	/// Apply a transformation (affine or non affine) to the smart object. This can be used in order
-	/// to e.g. skew or perspective transform the image. Automatically splits the matrix into it's 
+	/// to e.g. skew or perspective transform the image. Automatically splits the matrix into it's
 	/// affine and non-affine transformations and applies these separately.
-	/// 
+	///
 	/// \param matrix The transformation matrix, will internally be split into its affine and non-affine components.
 	void transform(const Eigen::Matrix3d& matrix)
 	{
@@ -503,7 +517,7 @@ struct SmartObjectLayer final: public Layer<T>, public ImageDataMixin<T>
 		affine(2, 0) = 0.0f;
 		affine(2, 1) = 0.0f;
 		// Normalize affine by m33
-		if (affine(2, 2) != 1.0) 
+		if (affine(2, 2) != 1.0)
 		{
 			affine /= affine(2, 2);
 		}
@@ -563,14 +577,14 @@ struct SmartObjectLayer final: public Layer<T>, public ImageDataMixin<T>
 		// This will call evaluate_transforms.
 		scale(Geometry::Point2D<double>(1.0f, scalar_y), center);
 	}
-	
+
 
 	float center_x() const noexcept override
 	{
 		return Layer<T>::m_CenterX;
 	}
 	/// Set the x center coordinate, analogous to calling `move()` while only moving on the x axis
-	void center_x(float x_coord) noexcept override 
+	void center_x(float x_coord) noexcept override
 	{
 		auto offset = x_coord - Layer<T>::m_CenterX;
 		// this will call evaluate_transforms
@@ -591,18 +605,18 @@ struct SmartObjectLayer final: public Layer<T>, public ImageDataMixin<T>
 	}
 
 
-	/// Reset all the transformations (not the warp) applied to the layer to map it back to the original square 
+	/// Reset all the transformations (not the warp) applied to the layer to map it back to the original square
 	/// from [0 - `original_width()`] and [0 - `original_height()`]. This does not reset the warp itself so if you had a warp applied it will stay.
-	/// 
+	///
 	/// If you instead wish to clear the warp you can use `reset_warp()`.
-	/// 
+	///
 	/// These two may be used in combination and sequence, so it is perfectly valid to call `reset_transform`
 	/// and `reset_warp` in any order
 	void reset_transform()
 	{
 		auto current_transform = m_SmartObjectWarp.non_affine_transform();
 		auto goal_transform = Geometry::create_quad<double>(
-			static_cast<double>(original_width()), 
+			static_cast<double>(original_width()),
 			static_cast<double>(original_height())
 		);
 
@@ -611,9 +625,9 @@ struct SmartObjectLayer final: public Layer<T>, public ImageDataMixin<T>
 	}
 
 	/// Reset the warp (not the transformations) applied to the Smart Object.
-	/// 
+	///
 	/// If you instead wish to clear the transformations you can use the `reset_transform()` function.
-	/// 
+	///
 	/// These two may be used in combination and sequence, so it is perfectly valid to call `reset_transform`
 	/// and `reset_warp` in any order
 	void reset_warp()
@@ -704,7 +718,7 @@ protected:
 		return blocks;
 	}
 
-	/// Extracts the m_ImageData as well as the layer mask into two vectors holding channel information as well as the image data 
+	/// Extracts the m_ImageData as well as the layer mask into two vectors holding channel information as well as the image data
 	/// itself. This also takes care of generating our layer mask channel if it is present. Invalidates any data held by the ImageLayer
 	std::tuple<std::vector<LayerRecords::ChannelInformation>, ChannelImageData> generate_channel_image_data()
 	{
@@ -814,10 +828,10 @@ private:
 	int32_t _m_Comp = -1;
 	int32_t _m_CompInfoID = -1;
 	int32_t _m_CompInfoOriginalID = -1;
-	
+
 private:
 
-	/// Cache keeping track of which channel is up-to-date and which channel is out of date. 
+	/// Cache keeping track of which channel is up-to-date and which channel is out of date.
 	/// Some or all of these may be out of date at any point, we must therefore ensure during evaluation if
 	/// image data can be grabbed directly or if it needs to be evaluated first.
 	/// Maps back to m_ImageData.
@@ -929,7 +943,7 @@ private:
 
 protected:
 
-	/// Evaluates the transformation (updates center coordinates and width/height) meaning grabbing the bbox width and height will give the 
+	/// Evaluates the transformation (updates center coordinates and width/height) meaning grabbing the bbox width and height will give the
 	/// latest warp information
 	void evaluate_transforms()
 	{
@@ -971,8 +985,8 @@ protected:
 			all_channel_indices.push_back(Layer<T>::s_mask_index);
 		}
 
-		// evaluate all the channels and return them. This could be a bit 
-		// more efficient by preallocating the channels in parallel but since 
+		// evaluate all the channels and return them. This could be a bit
+		// more efficient by preallocating the channels in parallel but since
 		// evaluate_channel calls the apply function which is already parallelized
 		// we will keep it like this
 		data_type out{};
@@ -1007,8 +1021,8 @@ protected:
 			if (!ImageDataMixin<T>::m_ImageData.contains(idinfo))
 			{
 				throw std::invalid_argument(fmt::format(
-					"SmartObjectLayer '{}': Invalid channel '{}' accessed while calling evaluate_channel(). This does not exist on the smart object", 
-					Layer<T>::m_LayerName, 
+					"SmartObjectLayer '{}': Invalid channel '{}' accessed while calling evaluate_channel(). This does not exist on the smart object",
+					Layer<T>::m_LayerName,
 					Enum::channelIDToString(idinfo.id))
 				);
 			}
@@ -1105,7 +1119,7 @@ private:
 		{
 			m_SmartObjectWarp = SmartObject::Warp::generate_default(linkedlayer->width(), linkedlayer->height());
 		}
-		
+
 		Layer<T>::m_ColorMode = parameters.colormode;
 		Layer<T>::m_LayerName = parameters.name;
 		if (parameters.blendmode == Enum::BlendMode::Passthrough)
@@ -1171,7 +1185,7 @@ private:
 		}
 	}
 
-	/// Decode the smart object from the PlacedLayerData Tagged Block, this contains information such as 
+	/// Decode the smart object from the PlacedLayerData Tagged Block, this contains information such as
 	void decode_placed_layer_data(const std::vector<std::shared_ptr<PlacedLayerDataTaggedBlock>>& locals)
 	{
 		if (locals.size() > 1)
@@ -1192,7 +1206,7 @@ private:
 		m_Hash = descriptor->at<UnicodeString>("Idnt").string();	// The identifier that maps back to the LinkedLayer
 
 		// These we all ignore for the time being, we store them locally and just rewrite them back out later
-		// This isn't necessarily in order. Some of these aren't available in all versions but we don't track 
+		// This isn't necessarily in order. Some of these aren't available in all versions but we don't track
 		// that either since we write out descriptors valid for the latest version.
 		{
 			_m_LayerHash = descriptor->at<UnicodeString>("placed").getString();
@@ -1237,7 +1251,7 @@ private:
 		// number of subdivisions (i.e. not 4x4) the warp struct will be empty and instead we will be dealing with a quilt warp
 		const auto warp = descriptor->at<Descriptors::Descriptor>("warp");
 		SmartObject::Warp warpStruct;
-		
+
 		if (descriptor->contains("quiltWarp"))
 		{
 			warpStruct = SmartObject::Warp::_deserialize(descriptor->at<Descriptors::Descriptor>("quiltWarp"), transform, non_affine_transform, SmartObject::Warp::quilt_warp{});
@@ -1247,7 +1261,7 @@ private:
 			warpStruct = SmartObject::Warp::_deserialize(warp, transform, non_affine_transform, SmartObject::Warp::normal_warp{});
 		}
 		m_SmartObjectWarp = warpStruct;
-		
+
 	}
 
 	/// Generate a PlacedLayerData descriptor from the SmartObject that can be passed to the tagged blocks of the layer.
@@ -1262,7 +1276,7 @@ private:
 		placed_layer->insert("totalPages", _m_NumPages);
 
 		placed_layer->insert("Crop", _m_Crop);
-		
+
 		auto frame_step = std::make_unique<Descriptors::Descriptor>("null");
 		frame_step->insert("numerator", _m_FrameStepNumerator);
 		frame_step->insert("denominator", _m_FrameStepDenominator);
@@ -1277,7 +1291,7 @@ private:
 		placed_layer->insert("Annt", _m_AntiAliasing);
 		placed_layer->insert("Type", _m_Type);
 
-		// Store the Transformation and non-affine transformation. 
+		// Store the Transformation and non-affine transformation.
 		{
 			auto [affine_transform, non_affine_transform] = m_SmartObjectWarp._generate_transform_descriptors();
 
@@ -1292,10 +1306,10 @@ private:
 			{
 				auto quilt_descriptor = m_SmartObjectWarp._serialize();
 				auto warp_descriptor = m_SmartObjectWarp._serialize_default(
-					static_cast<size_t>(m_OriginalSize[0]), 
+					static_cast<size_t>(m_OriginalSize[0]),
 					static_cast<size_t>(m_OriginalSize[1])
 				);
-			
+
 				placed_layer->insert("quiltWarp", std::move(quilt_descriptor));
 				placed_layer->insert("warp", std::move(warp_descriptor));
 			}
@@ -1336,7 +1350,7 @@ private:
 			placed_layer->insert("compInfo", std::make_unique<Descriptors::Descriptor>(std::move(comp_info_descriptor)));
 		}
 		return std::move(placed_layer);
-		
+
 	}
 
 	/// TBD: Unimplemented and might not ever implement depending on if we find many users who try to open up old files.

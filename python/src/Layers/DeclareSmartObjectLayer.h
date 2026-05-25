@@ -28,9 +28,9 @@ using namespace NAMESPACE_PSAPI;
 
 
 // Generate a LayeredFile python class from our struct adjusting some
-// of the methods 
+// of the methods
 template <typename T>
-void declare_smart_object_layer(py::module& m, const std::string& extension) 
+void declare_smart_object_layer(py::module& m, const std::string& extension)
 {
     using Class = SmartObjectLayer<T>;
     using PyClass = py::class_<Class, Layer<T>, std::shared_ptr<Class>>;
@@ -44,61 +44,61 @@ void declare_smart_object_layer(py::module& m, const std::string& extension)
     smart_object_layer.doc() = R"pbdoc(
 
         Smart objects are Photoshops' way of non-destructive image data edits while keeping a live link to the original file.
-        
-        We expose not only ways to replace this linked image data but also have functionality to recreate and store the warps 
-        applied to these objects (with more features coming in the future). 
+
+        We expose not only ways to replace this linked image data but also have functionality to recreate and store the warps
+        applied to these objects (with more features coming in the future).
         We currently support recreating all the warps found in the Edit->Transform tab. We do not yet support the `Edit->Puppet Warp`
         and `Edit->Perspective Warp` which are stored as Smart Filters.
-        
+
         Smart objects store their original image data on the `LayeredFile` while storing a decoded preview the size of the layer on
-        the layer itself. We provide multiple methods to get both the scaled and warped image data as well as the full size image 
+        the layer itself. We provide multiple methods to get both the scaled and warped image data as well as the full size image
         data.
-        
+
         <b>Image Data:</b>
-        
+
         Due to how SmartObjects work, image data is read-only.
-        In order to modify the underlying image data you should use the `replace()` method which will actually replace the underlying 
+        In order to modify the underlying image data you should use the `replace()` method which will actually replace the underlying
         file the smart object is linked to.
-        
-        Getting the image data can be done via the `get_image_data()`, `get_channel_by_id()`, `get_channel_by_index()` and 
-        `get_original_image_data()` functions. 
+
+        Getting the image data can be done via the `get_image_data()`, `get_channel_by_id()`, `get_channel_by_index()` and
+        `get_original_image_data()` functions.
         These will retrieve the transformed and warped image data. If you modify the transformations or the warp the warp is only
         redrawn on access to these functions.
-        
+
         <b>Transformations:</b>
-        
+
         Unlike normal layers, SmartObjects have slightly different transformation rules. As they link back to a file in memory or on disk
         the transformations are stored 'live' and can be modified without negatively impacting the quality of the image. We expose a variety
-        of transformation options to allow you to express this freedom. 
-        
+        of transformation options to allow you to express this freedom.
+
         Since we have both the original image data, and the rescaled image data to worry about there is two different widths and heights available:
-        
+
         - `original_width()` / `original_height()`
         	These represent the resolution of the original file image data, irrespective of what transforms are applied to it.
         	If you are e.g. loading a 4000x2000 jpeg these will return 4000 and 2000 respectively. These values may not be written to
-        
+
         - `width()` / `height()`
-        	These represent the final dimensions of the SmartObject with the warp and any transformations applied to it. 
-        
+        	These represent the final dimensions of the SmartObject with the warp and any transformations applied to it.
+
         For actually transforming the layer we expose the following methods:
-        
+
         - `move()`
         - `rotate()`
         - `scale()`
         - `transform()`
-        
-        These are all individually documented and abstract away the underlying implementation of these operations. 
+
+        These are all individually documented and abstract away the underlying implementation of these operations.
         You likely will not have to dive deeper than these.
-        
+
         <b>Warp:</b>
-        
-        Smart objects can also store warps which we implement using the `SmartObjectWarp` structure. 
+
+        Smart objects can also store warps which we implement using the `SmartObjectWarp` structure.
         These warps are stored as bezier surfaces with transformations applied on top of them.
         The transformations should be disregarded by the user as we provide easier functions on the SmartObjectLayer directly (see above).
         You may transfer these warps from one layer to another, modify them (although this requires knowledge of how bezier surfaces work), or clear them entirely.
-        
+
         For the latter we provide the reset_transform()` and `reset_warp()` functions.
-    
+
         Attributes
         ----------
 
@@ -107,7 +107,7 @@ void declare_smart_object_layer(py::module& m, const std::string& extension)
             although for transforming the layer it is recommended to use the transformation
             functions such as `move`, `rotate`, `scale` and `transform`.
         linkage : psapi.enum.LinkedLayerType
-            The linkage of the backing image file, if this is set to `psapi.enum.LinkedLayerType.data` 
+            The linkage of the backing image file, if this is set to `psapi.enum.LinkedLayerType.data`
             the image is stored in the file while if it is set to `psapi.enum.LinkedLayerType.external`
             it links to the file on disk and only stores the transformed image on file.
         name : str
@@ -151,7 +151,7 @@ void declare_smart_object_layer(py::module& m, const std::string& extension)
         mask_width: int
             The masks' width, this does not have to correspond with the layers' width
         mask_height: int
-            The masks' height, this does not have to correspond with the layers' height        
+            The masks' height, this does not have to correspond with the layers' height
 
     )pbdoc";
 
@@ -229,10 +229,10 @@ void declare_smart_object_layer(py::module& m, const std::string& extension)
     py::arg("is_locked") = false, R"pbdoc(
 
         Construct a SmartObjectLayer from the given filepath, linking the layer according to the link type.
-        Accepts an optional warp object to construct the layer with. If None is passed we default initialize 
+        Accepts an optional warp object to construct the layer with. If None is passed we default initialize
         the warp.
 
-        :param layered_file: 
+        :param layered_file:
             The file into which the layer will be inserted. This needs to be present as the actual link to the
             image file is stored globally and not on the layer itself.
         :type layered_file: LayeredFile_*bit
@@ -243,7 +243,7 @@ void declare_smart_object_layer(py::module& m, const std::string& extension)
         :param layer_name: The name of the group, its length must not exceed 255
         :type layer_name: str
 
-        :param layer_mask: 
+        :param layer_mask:
             Optional layer mask, must have the same dimensions as height * width as a 2-dimensional array with row-major ordering (for a numpy
             2D array this would mean with a shape of (height, width)
         :type layer_mask: numpy.ndarray
@@ -306,10 +306,10 @@ void declare_smart_object_layer(py::module& m, const std::string& extension)
 
         Replace the smart object with the given path keeping transformations as well as warp in place.
 
-        :param path: 
+        :param path:
             The new filepath to link to, this must be a file format recognized both by Photoshop and OpenImageIO
         :param link_externally:
-            Whether to link the file externally or store the raw file bytes on the 
+            Whether to link the file externally or store the raw file bytes on the
 	        photoshop document itself. Keeping this at its default `False` is recommended
 	        for sharing these files. If the file already exists as another smart object layer
             this parameter is ignored.
@@ -329,14 +329,34 @@ void declare_smart_object_layer(py::module& m, const std::string& extension)
 
 	    )pbdoc");
 
-	smart_object_layer.def("filepath", &Class::filepath, R"pbdoc(
+    smart_object_layer.def("filepath", &Class::filepath, R"pbdoc(
 
-        Retrieve the filepath associated with this smart object. Depending on how the 
+        Retrieve the filepath associated with this smart object. Depending on how the
 	    Smart object is linked (`external` or `data`) this may not be written to disk.
-        If the file is linked as `data` this path may not represent the actual filepath 
+        If the file is linked as `data` this path may not represent the actual filepath
         on disk as this information is no longer present.
 
 	    )pbdoc");
+
+    smart_object_layer.def("get_raw_bytes", [](Class& self) -> py::bytes
+        {
+            auto bytes = self.raw_bytes();
+            return py::bytes(reinterpret_cast<const char*>(bytes.data()), bytes.size());
+        }, R"pbdoc(
+        Return the raw embedded file bytes of this smart object.
+
+        Only populated for data-linked smart objects
+        (``linkage == psapi.enum.LinkedLayerType.data``).
+        Returns ``b""`` for externally-linked layers.
+
+        Use this to write the embedded PSD/PSB to a temp file and recurse into it::
+
+            raw = layer.get_raw_bytes()
+            if raw:
+                with tempfile.NamedTemporaryFile(suffix=".psb", delete=False) as f:
+                    f.write(raw)
+                    inner = psapi.LayeredFile.read(f.name)
+        )pbdoc");
 
 	// Image data.
 	// ---------------------------------------------------------------------------------------------------------------------
@@ -354,7 +374,7 @@ void declare_smart_object_layer(py::module& m, const std::string& extension)
         }, R"pbdoc(
 
         Extract all the channels of the original image data.
-	    
+
 	    Unlike the accessors `get_image_data()` and `get_channel()` this function gets the full resolution
 	    image data that is stored on the smart object, i.e. the original image data. This may be smaller
 	    or larger than the layers `width` or `height`. To get the actual resolution you can query: `original_width()` and `original_height()`
@@ -364,12 +384,12 @@ void declare_smart_object_layer(py::module& m, const std::string& extension)
     smart_object_layer.def("original_width", &Class::original_width, R"pbdoc(
 
         Retrieve the original image datas' width.
-	    
+
 	    This does not have the same limitation as Photoshop layers of being limited
 	    to 30,000 or 300,000 pixels depending on the file type
-	    
+
 	    :raises RuntimeError: if the hash defined by `hash()` is not valid for the document
-	    
+
 	    :returns: The width of the original image data
 
 	    )pbdoc");
@@ -377,12 +397,12 @@ void declare_smart_object_layer(py::module& m, const std::string& extension)
     smart_object_layer.def("original_height", &Class::original_height, R"pbdoc(
 
         Retrieve the original image datas' height.
-	    
+
 	    This does not have the same limitation as Photoshop layers of being limited
 	    to 30,000 or 300,000 pixels depending on the file type
-	    
+
 	    :raises RuntimeError: if the hash defined by `hash()` is not valid for the document
-	    
+
 	    :returns: The height of the original image data
 
 	    )pbdoc");
@@ -456,9 +476,9 @@ void declare_smart_object_layer(py::module& m, const std::string& extension)
 	smart_object_layer.def("reset_warp", &Class::reset_warp, R"pbdoc(
 
         Reset the warp (not the transformations) applied to the Smart Object.
-	    
+
 	    If you instead wish to clear the transformations you can use the `reset_transform()` function.
-	    
+
 	    These two may be used in combination and sequence, so it is perfectly valid to call `reset_transform`
 	    and `reset_warp` in any order
 
@@ -466,12 +486,12 @@ void declare_smart_object_layer(py::module& m, const std::string& extension)
 
 	smart_object_layer.def("reset_transform", &Class::reset_transform, R"pbdoc(
 
-        Reset all the transformations (not the warp) applied to the layer to map it back to the original square 
-	    from [0 - `original_width()`] and [0 - `original_height()`]. This does not reset the warp itself so if 
+        Reset all the transformations (not the warp) applied to the layer to map it back to the original square
+	    from [0 - `original_width()`] and [0 - `original_height()`]. This does not reset the warp itself so if
         you had a warp applied it will stay.
-	    
+
 	    If you instead wish to clear the warp you can use `reset_warp()`.
-	    
+
 	    These two may be used in combination and sequence, so it is perfectly valid to call `reset_transform`
 	    and `reset_warp` in any order.
 
