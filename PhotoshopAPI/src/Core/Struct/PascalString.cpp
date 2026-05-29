@@ -63,14 +63,21 @@ std::string PascalString::readString(File& document, const uint8_t padding) noex
 // ---------------------------------------------------------------------------------------------------------------------
 void PascalString::read(File& document, const uint8_t padding) noexcept
 {
-	uint8_t stringSize = ReadBinaryData<uint8_t>(document);
-	FileSection::size(RoundUpToMultiple<uint8_t>(stringSize + 1u, padding));
-	std::vector<uint8_t> stringData = ReadBinaryArray<uint8_t>(document, stringSize);
-	auto PascalString = std::string(stringData.begin(), stringData.end());
-	m_String = convertStrToUTF8(EncodingType::Windows_1252, PascalString);
+    uint8_t stringSize = ReadBinaryData<uint8_t>(document);
+    FileSection::size(RoundUpToMultiple<uint8_t>(stringSize + 1u, padding));
+    std::vector<uint8_t> stringData = ReadBinaryArray<uint8_t>(document, stringSize);
+    auto PascalString = std::string(stringData.begin(), stringData.end());
+    m_String = convertStrToUTF8(EncodingType::Windows_1252, PascalString);
 
-	// Skip the padding bytes
-	document.skip(FileSection::size() - 1u - stringSize);
+    // Strip trailing null characters (mirrors what UnicodeString::read() does).
+    // Without this, UUID strings read from LinkedLayer binary blocks keep a
+    // trailing '\0' that causes map lookups against descriptor-sourced UUIDs
+    // (which ARE stripped) to silently miss, triggering the "Unknown linked
+    // layer hash '' encountered" RuntimeError.
+    m_String.erase(std::find(m_String.begin(), m_String.end(), '\0'), m_String.end());
+
+    // Skip the padding bytes
+    document.skip(FileSection::size() - 1u - stringSize);
 }
 
 

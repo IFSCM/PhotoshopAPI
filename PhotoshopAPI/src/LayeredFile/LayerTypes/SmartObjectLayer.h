@@ -1194,16 +1194,23 @@ private:
 		}
 		const auto& local = locals[0];
 
-
 		const auto& descriptor = local->m_Descriptor;
-		if (descriptor->contains("filterFX"))
-		{
-			PSAPI_LOG_WARNING("SmartObject", "Filter based warps are not supported at the moment (Edit->Puppet Warp and Edit->Perspective Warp)." \
-				" These will not be represented properly in the API");
-			return;
-		}
 
 		m_Hash = descriptor->at<UnicodeString>("Idnt").string();	// The identifier that maps back to the LinkedLayer
+
+		if (descriptor->contains("filterFX"))
+        {
+            PSAPI_LOG_WARNING("SmartObject", "Filter based warps are not supported at the moment (Edit->Puppet Warp and Edit->Perspective Warp)." \
+				" These will not be represented properly in the API");
+            // Populate m_Filename from the linked layer so the object is usable
+            // for read-only inspection even though we cannot decode the warp.
+            if (m_LinkedLayers && m_LinkedLayers->contains(m_Hash))
+            {
+                auto ll = m_LinkedLayers->at(m_Hash);
+                if (ll) { m_Filename = ll->path().filename().string(); }
+            }
+            return;
+        }
 
 		// These we all ignore for the time being, we store them locally and just rewrite them back out later
 		// This isn't necessarily in order. Some of these aren't available in all versions but we don't track
